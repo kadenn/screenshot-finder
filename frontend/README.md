@@ -1,5 +1,36 @@
-# Vue 3 + Vite
+# Frontend - Screenshot Search UI
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Vue 3 chat interface for searching screenshots with natural language queries.
 
-Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://vuejs.org/guide/scaling-up/tooling.html#ide-support).
+## Quick Start
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Start dev server:
+```bash
+npm run dev
+```
+
+Frontend will run on http://localhost:5173
+
+## Features
+
+- Chat interface for natural language queries
+- Real-time screenshot search results
+- Thumbnail grid with confidence scores
+- Full-size image preview modal
+- Auto-scroll to latest messages
+
+## Build for Production
+
+```bash
+npm run build
+```
+
+Preview production build:
+```bash
+npm run preview
+```

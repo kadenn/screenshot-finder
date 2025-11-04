@@ -2,6 +2,9 @@
 
 A monorepo screenshot search application that uses GPT-5 vision API to analyze and index screenshots, with a simple chat interface for natural language queries.
 
+<img width="1296" height="884" alt="image" src="https://github.com/user-attachments/assets/4d2eaa73-0c43-4f6b-9467-168bf03f0c61" />
+
+
 ## Features
 
 - **Auto-indexing**: Backend automatically scans and indexes all screenshots from `/screenshots` folder on startup

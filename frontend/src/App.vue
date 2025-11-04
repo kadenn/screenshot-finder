@@ -5,8 +5,17 @@
       <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
         <div class="flex items-center justify-between">
           <h1 class="text-2xl font-bold text-gray-800">🔍 Screenshot Search</h1>
-          <div class="text-sm text-gray-500">
-            {{ totalScreenshots }} screenshots indexed
+          <div class="flex items-center gap-4">
+            <div class="text-sm text-gray-500">
+              {{ totalScreenshots }} screenshots indexed
+            </div>
+            <button
+              @click="reindex"
+              :disabled="isIndexing"
+              class="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            >
+              {{ isIndexing ? '⏳ Indexing...' : '🔄 Re-index' }}
+            </button>
           </div>
         </div>
       </header>
@@ -120,6 +129,7 @@ const API_BASE_URL = 'http://localhost:8000'
 const messages = ref([])
 const userInput = ref('')
 const isLoading = ref(false)
+const isIndexing = ref(false)
 const selectedImage = ref(null)
 const messagesContainer = ref(null)
 const totalScreenshots = ref(0)
@@ -188,5 +198,35 @@ const openImageModal = (filename) => {
 
 const closeImageModal = () => {
   selectedImage.value = null
+}
+
+const reindex = async () => {
+  if (isIndexing.value) return
+  
+  isIndexing.value = true
+  
+  try {
+    const response = await axios.post(`${API_BASE_URL}/api/reindex`)
+    totalScreenshots.value = response.data.total_screenshots
+    
+    // Add success message to chat
+    messages.value.push({
+      type: 'ai',
+      content: `✅ ${response.data.message}. Total: ${response.data.total_screenshots} screenshots.`,
+      results: []
+    })
+    
+    await nextTick()
+    scrollToBottom()
+  } catch (error) {
+    console.error('Reindex error:', error)
+    messages.value.push({
+      type: 'ai',
+      content: '❌ Error during re-indexing. Please check the backend logs.',
+      results: []
+    })
+  } finally {
+    isIndexing.value = false
+  }
 }
 </script>

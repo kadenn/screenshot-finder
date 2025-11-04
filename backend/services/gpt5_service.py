@@ -1,8 +1,13 @@
 """GPT-5 service for image analysis and search."""
 import os
 import base64
+import json
 from typing import Dict, Any, List
 from openai import OpenAI
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -51,13 +56,12 @@ Please be thorough with text extraction as this will be used for search."""
         response_format={"type": "json_object"}
     )
     
-    import json
     metadata = json.loads(response.choices[0].message.content)
     return metadata
 
 
-def search_screenshots(query: str, screenshots_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Search screenshots using GPT-5 agent to find relevant matches."""
+def chat_with_screenshots(query: str, screenshots_data: List[Dict[str, Any]], conversation_history: List[Dict[str, str]] = None) -> Dict[str, Any]:
+    """Chat with an agent that has access to screenshot metadata and can answer questions."""
     
     # Prepare screenshots context for the agent
     screenshots_context = []
@@ -68,45 +72,60 @@ def search_screenshots(query: str, screenshots_data: List[Dict[str, Any]]) -> Li
             "metadata": screenshot["metadata"]
         })
     
-    system_prompt = """You are a screenshot search assistant. Your job is to analyze a user's query and find the most relevant screenshots from the indexed database.
+    system_prompt = f"""You are a helpful AI assistant with access to a user's screenshot database. You can search through screenshots, answer questions about them, and have natural conversations.
 
-Given a user query and a list of screenshots with their metadata, you need to:
-1. Understand what the user is looking for
-2. Analyze each screenshot's metadata to determine relevance
-3. Rank screenshots by relevance (0.0 to 1.0 confidence score)
-4. Return the top 5 most relevant results
+Available Screenshots Database:
+{json.dumps(screenshots_context, indent=2)}
 
-Return your response in this JSON format:
-{
+Your capabilities:
+1. Search and find relevant screenshots based on user queries
+2. Answer questions about screenshot content and details
+3. Provide insights and summaries about the screenshots
+4. Have natural conversations about the images
+
+When responding:
+- If the user is searching for screenshots, identify relevant ones and explain why they match
+- If asking about details, reference the metadata to answer
+- Be conversational and helpful
+- Use emojis occasionally to be friendly
+
+You must ALWAYS respond in this JSON format:
+{{
+  "message": "Your conversational response to the user",
   "results": [
-    {
+    {{
       "id": screenshot_id,
       "filename": "filename.png",
       "confidence": 0.95,
-      "reason": "Brief explanation why this matches"
-    }
+      "reason": "Why this screenshot is relevant"
+    }}
   ]
-}
+}}
 
-Only include screenshots with confidence > 0.3. If no screenshots match well, return an empty results array."""
+- Include "results" array with relevant screenshots (can be empty if just chatting)
+- Only include screenshots with confidence > 0.3
+- The "message" should always be present with your response
+"""
 
-    user_message = f"""User Query: "{query}"
-
-Available Screenshots:
-{json.dumps(screenshots_context, indent=2)}
-
-Find the top 5 most relevant screenshots for this query."""
+    # Build conversation messages
+    messages = [{"role": "system", "content": system_prompt}]
+    
+    # Add conversation history if provided
+    if conversation_history:
+        messages.extend(conversation_history)
+    
+    # Add current query
+    messages.append({"role": "user", "content": query})
 
     response = client.chat.completions.create(
-        model="gpt-4o",  # Using gpt-4o as fallback until gpt-5 is available in your account
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message}
-        ],
+        model="gpt-4o",
+        messages=messages,
         response_format={"type": "json_object"}
     )
     
-    import json
     result = json.loads(response.choices[0].message.content)
-    return result.get("results", [])
+    return {
+        "message": result.get("message", ""),
+        "results": result.get("results", [])
+    }
 

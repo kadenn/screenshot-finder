@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 from models import init_db, get_all_screenshots_metadata
 from services.indexer import scan_and_index
-from services.gpt5_service import search_screenshots
+from services.gpt5_service import chat_with_screenshots
 
 # Load environment variables
 load_dotenv()

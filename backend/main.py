@@ -32,10 +32,12 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     """Chat request model."""
     query: str
+    conversation_history: List[Dict[str, str]] = None
 
 
 class ChatResponse(BaseModel):
     """Chat response model."""
+    message: str
     results: List[Dict[str, Any]]
     query: str
 
@@ -73,7 +75,7 @@ async def root():
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
-    """Chat endpoint - search screenshots based on natural language query."""
+    """Chat endpoint - conversational agent with screenshot search."""
     if not request.query or not request.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty")
     
@@ -83,18 +85,24 @@ async def chat(request: ChatRequest):
     if not screenshots:
         return ChatResponse(
             query=request.query,
+            message="I don't have any screenshots indexed yet. Please add some screenshots to the /screenshots folder and click the Re-index button.",
             results=[]
         )
     
-    # Search using GPT-5 agent
+    # Chat with GPT agent
     try:
-        results = search_screenshots(request.query, screenshots)
+        response = chat_with_screenshots(
+            request.query, 
+            screenshots,
+            request.conversation_history
+        )
         return ChatResponse(
             query=request.query,
-            results=results
+            message=response["message"],
+            results=response["results"]
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Search error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Chat error: {str(e)}")
 
 
 @app.get("/api/images/{filename}")

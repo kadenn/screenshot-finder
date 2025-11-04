@@ -14,7 +14,7 @@
               :disabled="isIndexing"
               class="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >
-              {{ isIndexing ? '⏳ Indexing...' : '🔄 Re-index' }}
+              {{ isIndexing ? '⏳ Scanning...' : '🔄 Refresh' }}
             </button>
           </div>
         </div>
@@ -23,8 +23,14 @@
       <!-- Chat Messages -->
       <div ref="messagesContainer" class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
         <div v-if="messages.length === 0" class="text-center text-gray-500 mt-12">
-          <p class="text-lg mb-2">Ask me about your screenshots!</p>
-          <p class="text-sm">Try: "show me code screenshots" or "find graphs"</p>
+          <p class="text-lg mb-2">👋 Hi! I'm your screenshot assistant</p>
+          <p class="text-sm mb-4">I can help you find and discuss your screenshots</p>
+          <div class="text-xs space-y-1">
+            <p>💬 "show me code screenshots"</p>
+            <p>💬 "what's in the first image?"</p>
+            <p>💬 "find graphs or charts"</p>
+            <p>💬 "tell me more about screenshot X"</p>
+          </div>
         </div>
 
         <!-- Messages -->
@@ -127,6 +133,7 @@ import axios from 'axios'
 const API_BASE_URL = 'http://localhost:8000'
 
 const messages = ref([])
+const conversationHistory = ref([])
 const userInput = ref('')
 const isLoading = ref(false)
 const isIndexing = ref(false)
@@ -156,27 +163,38 @@ const sendMessage = async () => {
     content: query
   })
 
+  // Add to conversation history
+  conversationHistory.value.push({
+    role: 'user',
+    content: query
+  })
+
   isLoading.value = true
 
   try {
     const response = await axios.post(`${API_BASE_URL}/api/chat`, {
-      query: query
+      query: query,
+      conversation_history: conversationHistory.value.slice(-10) // Keep last 10 messages for context
     })
 
     // Add AI response
     messages.value.push({
       type: 'ai',
-      content: response.data.results.length > 0
-        ? `Found ${response.data.results.length} matching screenshot${response.data.results.length > 1 ? 's' : ''}`
-        : 'No matching screenshots found',
+      content: response.data.message,
       results: response.data.results
     })
 
+    // Add AI response to conversation history
+    conversationHistory.value.push({
+      role: 'assistant',
+      content: response.data.message
+    })
+
   } catch (error) {
-    console.error('Search error:', error)
+    console.error('Chat error:', error)
     messages.value.push({
       type: 'ai',
-      content: 'Sorry, there was an error searching your screenshots.',
+      content: 'Sorry, there was an error. Please try again.',
       results: []
     })
   } finally {
@@ -209,10 +227,10 @@ const reindex = async () => {
     const response = await axios.post(`${API_BASE_URL}/api/reindex`)
     totalScreenshots.value = response.data.total_screenshots
     
-    // Add success message to chat
+    // Add success message to chat (system message, not part of conversation)
     messages.value.push({
       type: 'ai',
-      content: `✅ ${response.data.message}. Total: ${response.data.total_screenshots} screenshots.`,
+      content: `✅ ${response.data.message}. Total: ${response.data.total_screenshots} screenshots indexed!`,
       results: []
     })
     
